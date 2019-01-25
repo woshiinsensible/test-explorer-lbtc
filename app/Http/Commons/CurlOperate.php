@@ -752,75 +752,83 @@ class CurlOperate
        }
    }
 
-    public function GetTxByAddr($params)
-   {
-       $url  = self::rpc_url;
-       $user = self::rpc_user;
-       $pwd  = self::rpc_pwd;
-       $Author = $user.':'.$pwd;
+    public function GetTxByAddr($addr,$startBlock = "",$endBlock = "",$limit = "10000000")
+    {
+        $url  = self::rpc_url;
+        $user = self::rpc_user;
+        $pwd  = self::rpc_pwd;
+        $Author = $user.':'.$pwd;
 
-       $backStatus = 888;
+        $backStatus = 888;
 
-       //记录请求次数
-       $flag = 1;
+        //记录请求次数
+        $flag = 1;
 
-       while($backStatus != 200){
-           $jsonArr = ["method"=>"getaddresstxids","params"=>[$params],"id"=>1];
-           $jsonStr = json_encode($jsonArr);
-           $Authorization = base64_encode($Author);
+        if(empty($startBlock) || empty($endBlock)){
+            $jsonArr = ["method"=>"getaddresstxids","params"=>[$addr],"id"=>1];
+        }else{
+            $jsonArr = ["method"=>"getaddresstxids","params"=>[$addr,$limit,$startBlock,$endBlock],"id"=>1];
+        }
 
-           $ch = curl_init();
-           curl_setopt($ch, CURLOPT_POST, 1);
-           curl_setopt($ch, CURLOPT_URL, $url);
-           curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonStr);
-           curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-           curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                   'Content-Type: application/json; charset=utf-8',
-                   'Content-Length: ' . strlen($jsonStr),
-                   'Authorization:Basic '.$Authorization
-               )
-           );
+        while($backStatus != 200){
+            $jsonStr = json_encode($jsonArr);
+            $Authorization = base64_encode($Author);
 
-           $response = curl_exec($ch);
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonStr);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                    'Content-Type: application/json; charset=utf-8',
+                    'Content-Length: ' . strlen($jsonStr),
+                    'Authorization:Basic '.$Authorization
+                )
+            );
 
-           $responseArray = json_decode($response,1);
+            $response = curl_exec($ch);
 
-           //请求数据是否为空
-           if($responseArray){
-               if(array_key_exists('error',$responseArray) && $responseArray['error'] != null){
-                   curl_close($ch);
-                   return json_encode(array('error'=>1,'msg'=>$responseArray['error']['message']));
-               }
+            $responseArray = json_decode($response,1);
 
-               $backStatusTemp= curl_getinfo($ch,CURLINFO_HTTP_CODE);
+            if($responseArray){
+                if(array_key_exists('error',$responseArray) && $responseArray['error'] != null){
+                    curl_close($ch);
+                    return json_encode(array('error'=>1,'msg'=>$responseArray['error']['message']));
+                }
 
-               $flag++;
+                $backStatusTemp= curl_getinfo($ch,CURLINFO_HTTP_CODE);
 
-               if($flag > 3){
-                   $errorArray = [
-                       'msg'   => 'Request data does not exist!'
-                   ];
-                   curl_close($ch);
-                   return json_encode($errorArray);
-               }
+                $flag++;
 
-               if($backStatusTemp == 200){
-                   curl_close($ch);
-                   return $response;
-               }
-           }else{
-               $flag++;
+                if($flag > 3){
+//                    $errorArray = [
+//                        'msg'   => 'Request data does not exist!'
+//                    ];
+                    curl_close($ch);
+                    $uTool = new UniversalTools();
+                    $uTool->HttpStatus(503);
+//                    return json_encode($errorArray);
+                }
 
-               if($flag > 3){
-                   $errorArray = [
-                       'msg'   => 'Request data does not exist!'
-                   ];
-                   curl_close($ch);
-                   return json_encode($errorArray);
-               }
-           }
-       }
-   }
+                if($backStatusTemp == 200){
+                    curl_close($ch);
+                    return $response;
+                }
+            }else{
+                $flag++;
+
+                if($flag > 3){
+//                    $errorArray = [
+//                        'msg'   => 'Request data does not exist!'
+//                    ];
+                    curl_close($ch);
+                    $uTool = new UniversalTools();
+                    $uTool->HttpStatus(503);
+//                    return json_encode($errorArray);
+                }
+            }
+        }
+    }
 
     public function ListUnSpent($params)
    {
